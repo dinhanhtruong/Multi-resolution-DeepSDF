@@ -13,6 +13,7 @@ class DeepSDFDecoder(keras.Model):
         self.latent_shape_code_emb = Embedding(num_shapes, shape_code_dim, embeddings_initializer=emb_init)
 
         # Head: 4 FC layers [B, (shape_code_dim+3)] -> [B, (hidden-(shape_code_dim+3))]
+        # TODO: try WeightNorm
         self.head = keras.Sequential([
             Dense(hidden_dim),
             Dropout(dropout_rate),
@@ -53,7 +54,7 @@ class DeepSDFDecoder(keras.Model):
         """
         x, shape_idx = input
         # x, shape_idx = input
-        print("x in:", x[:6])
+        # print("x in:", x[:6])
         shape_code = self.latent_shape_code_emb(shape_idx) #[shape_code_dim,]
         # print("shape code: ", shape_code.numpy()[:10])
         shape_code = tf.repeat(tf.expand_dims(shape_code, axis=0), tf.shape(x)[0], axis=0) # [B, shape_code_dim]
@@ -66,6 +67,8 @@ class DeepSDFDecoder(keras.Model):
 
         # print("model out:", out.numpy()[:10])
         return tf.squeeze(out)
+
+    @tf.function
     def loss(self, sdf_pred, sdf_true, clamp_dist):
         sdf_pred = tf.expand_dims(sdf_pred, axis=1)
         sdf_true = tf.expand_dims(sdf_true, axis=1)

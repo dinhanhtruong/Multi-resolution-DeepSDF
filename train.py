@@ -13,6 +13,7 @@ from sdf import *
 
 
 # ====== TRAINING STEP FOR SINGLE IMAGE ===============
+@tf.function
 def train_step(shape_idx, positions, sdf_true):
     """Trains the model for a SINGLE shape using the positions given as queries to the SDF
     
@@ -25,43 +26,52 @@ def train_step(shape_idx, positions, sdf_true):
         sdf_pred = model([positions, shape_idx], training=True)
         loss = model.loss(sdf_pred, sdf_true, clamping_dist)
 
-    print("loss: ", loss)
+    # print("loss: ", loss)
     # train model params and latent codes jointly
     grads = tape.gradient(loss, model.trainable_variables)
     optimizer.apply_gradients(zip(grads, model.trainable_variables))
+    return loss
 
 # ====== MAIN TRAINING LOOP ===============
 def train(data_dir):
-    path = 'training_checkpoints2'
+    path = 'training_checkpoints3_cont'
     # get lexicographically ordered filepaths
     shape_filepaths = get_mesh_files(data_dir)
     print(shape_filepaths)
-    for epoch in range(epochs):
-        print("================ epoch: ", epoch)
+
+    # TODO: loop over all shapes, convert to SDF, check for bad meshes, enumerate & batch
+    for shape_idx, filepath in shape_filepaths.items():
+        # TEMP: TRAIN FOR EASY PLANE at idx 1
+        if shape_idx != 1:
+            continue
+        shape_idx = 0
         # iterate over shapes
-        for shape_idx, filepath in shape_filepaths.items():
-            # TODO: loop over all shapes, convert to SDF, check for bad meshes, enumerate & batch
-            mesh = trimesh.load(filepath)
-            # convert to sdf
-            positions, sdf_vals = sample_sdf_near_surface(mesh, num_sample_points)
-            visualize_sdf_points(positions, sdf_vals)
+        # convert to sdf
+        mesh = trimesh.load(filepath)
+        positions, sdf_vals = sample_sdf_near_surface(mesh, num_sample_points)
+        visualize_sdf_points(positions, sdf_vals)
+        for epoch in range(epochs):
+            losses = []
+            print("================ epoch: ", epoch)
             # batch
             dataset_positions = tf.data.Dataset.from_tensor_slices(positions)
             dataset_sdf = tf.data.Dataset.from_tensor_slices(sdf_vals)
-            dataset = tf.data.Dataset.zip((dataset_positions, dataset_sdf)).shuffle(buffer_size=num_sample_points).batch(batch_sz)
-            # TODO: convert to fit()
+            dataset = tf.data.Dataset.zip((dataset_positions, dataset_sdf)).shuffle(buffer_size=num_sample_points).batch(batch_sz, drop_remainder=True)
             for batch_positions, batch_sdf_vals in dataset:
                 # TODO: check for bad mash exceptions
-                train_step(shape_idx, batch_positions, batch_sdf_vals)
+                losses.append(train_step(shape_idx, batch_positions, batch_sdf_vals).numpy())
             # extract_mesh_from_sdf(shape_idx, model)
-            break # train for single shape atm
+            avg_loss = np.mean(losses)
+            print("epoch loss: ", avg_loss)
 
-        # save model every epoch
-        print("saving")
-        model.save(path)
-        print("saved to: ", path)
+            if epoch % 4 == 3:
+                # save model every epoch
+                print("saving")
+                model.save(path)
+                print("saved to: ", path)
+        break # train for single shape atm
 
-    extract_mesh_from_sdf(0, model)
+    # extract_mesh_from_sdf(0, model, 'output/out4.stl')
 
 def visualize_sdf_points(points, sdf_vals):
     colors = np.zeros(points.shape)
@@ -72,12 +82,11 @@ def visualize_sdf_points(points, sdf_vals):
     scene.add(cloud)
     viewer = pyrender.Viewer(scene, use_raymond_lighting=True, point_size=2)
 
-def extract_mesh_from_sdf(shape_idx, model):
+def extract_mesh_from_sdf(shape_idx, model, filepath):
     sdf = trained_sdf(shape_idx, model)
     print("saving mesh")
-    sdf.save('output/out3.stl', bounds=((-1, -1, -1), (1, 1, 1)))
-    print("saved mesh")
-
+    sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)))
+    print("saved mesh at ", filepath)
 
 @sdf3
 def trained_sdf(shape_idx, model):
@@ -93,5 +102,9 @@ def trained_sdf(shape_idx, model):
 
 
 if __name__ == "__main__":
-    model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
+    # model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
+    model = keras.models.load_model("training_checkpoints3")
+    # model = keras.models.load_model(
+    #     "training_checkpoints3", custom_objects={"DeepSDFDecoder": DeepSDFDecoder}
+    # )
     train("temp_plane_data")

@@ -17,9 +17,9 @@ from hyperparams import *
 
 
 # load model
-model = keras.models.load_model("training_checkpoints2")
+model = keras.models.load_model("training_checkpoints3_cont")
 model.summary()
 # try marching cubes
 print("extracting")
 
-extract_mesh_from_sdf(0, model)
+extract_mesh_from_sdf(0, model, 'output/401_epochs.stl')
