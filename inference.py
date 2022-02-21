@@ -22,4 +22,4 @@ model.summary()
 # try marching cubes
 print("extracting")
 
-extract_mesh_from_sdf(0, model, 'output/401_epochs.stl')
+extract_mesh_from_sdf(0, model, 'output/1000_epochs_HQ2.stl')

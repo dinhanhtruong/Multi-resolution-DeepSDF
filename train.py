@@ -85,7 +85,7 @@ def visualize_sdf_points(points, sdf_vals):
 def extract_mesh_from_sdf(shape_idx, model, filepath):
     sdf = trained_sdf(shape_idx, model)
     print("saving mesh")
-    sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)))
+    sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)), samples=2**25)
     print("saved mesh at ", filepath)
 
 @sdf3
@@ -103,7 +103,7 @@ def trained_sdf(shape_idx, model):
 
 if __name__ == "__main__":
     # model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
-    model = keras.models.load_model("training_checkpoints3")
+    model = keras.models.load_model("training_checkpoints3_cont")
     # model = keras.models.load_model(
     #     "training_checkpoints3", custom_objects={"DeepSDFDecoder": DeepSDFDecoder}
     # )
