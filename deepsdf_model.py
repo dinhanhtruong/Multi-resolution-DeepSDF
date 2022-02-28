@@ -41,7 +41,7 @@ class DeepSDFDecoder(keras.Model):
             Dropout(dropout_rate),
             ReLU(name='tail_relu_3'),
             Dense(1),
-            Activation('tanh')
+            Activation('sigmoid') # was tanh
         ])
 
     def call(self, input, training=False):
@@ -63,7 +63,7 @@ class DeepSDFDecoder(keras.Model):
         intermediate = self.head(input) # [B, hidden-(shape_code_dim+3)]
         # skip connection
         intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
-        out = self.tail(intermediate)
+        out = self.tail(intermediate) * 0.1
 
         # print("model out:", out.numpy()[:10])
         return tf.squeeze(out)
@@ -72,8 +72,8 @@ class DeepSDFDecoder(keras.Model):
     def loss(self, sdf_pred, sdf_true, clamp_dist):
         sdf_pred = tf.expand_dims(sdf_pred, axis=1)
         sdf_true = tf.expand_dims(sdf_true, axis=1)
-        # print("model out: ", sdf_pred.numpy()[:5])
-        # print("actual: ", sdf_true[:5])
+        #print("model out: ", sdf_pred.numpy()[:15])
+        #print("actual: ", sdf_true[:15])
         # return keras.losses.MeanAbsoluteError()(tf.clip_by_value(sdf_true, -1*clamp_dist, clamp_dist), tf.clip_by_value(sdf_pred, -1*clamp_dist, clamp_dist))
-        return keras.losses.MeanAbsoluteError()(tf.clip_by_value(sdf_true, -1*clamp_dist, clamp_dist), tf.clip_by_value(sdf_pred, -1*clamp_dist, clamp_dist))
+        return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
 

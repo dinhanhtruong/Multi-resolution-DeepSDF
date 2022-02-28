@@ -13,5 +13,5 @@ dropout_rate = 0.2
 learning_rate = 0.00001 #1e-5 in paper for model weights, 1e-3 for embedding?
 optimizer = keras.optimizers.Adam(learning_rate)
 num_shapes = 1
-num_sample_points = 170000 #500000
+num_sample_points = 180000 #500000
 shape_code_dim = 256 #256 in paper
