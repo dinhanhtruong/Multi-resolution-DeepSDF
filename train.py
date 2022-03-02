@@ -91,7 +91,7 @@ def visualize_sdf_points(points, sdf_vals):
 def extract_mesh_from_sdf(shape_idx, model, filepath, occupancy=False, num_samples=2**25):
     sdf = trained_sdf(shape_idx, model, occupancy)
     print("saving mesh")
-    sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)), samples=num_samples)
+    sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)), samples=num_samples, sparse=False)
     print("saved mesh at ", filepath)
 
 @sdf3

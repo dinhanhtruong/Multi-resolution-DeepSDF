@@ -17,9 +17,9 @@ from hyperparams import *
 
 
 # load model
-model = keras.models.load_model('training_checkpoints_occupancy_BCE_1e-5')
+model = keras.models.load_model('training_checkpoints_scaled_output')
 model.summary()
 # try marching cubes
 print("extracting")
 
-extract_mesh_from_sdf(0, model, 'output/occupancy/1000_epochs_very_high.stl', occupancy=False, num_samples=2**28) #2**25 HI, 2**22 default
+extract_mesh_from_sdf(0, model, 'output/scaled_output/550_epochs_high.stl', occupancy=False, num_samples=2**25) #2**25 HI, 2**22 default

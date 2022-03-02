@@ -63,7 +63,7 @@ class DeepSDFDecoder(keras.Model):
         intermediate = self.head(input) # [B, hidden-(shape_code_dim+3)]
         # skip connection
         intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
-        out = self.tail(intermediate) * 0.1
+        out = self.tail(intermediate) 
 
         # print("model out:", out.numpy()[:10])
         return tf.squeeze(out)
