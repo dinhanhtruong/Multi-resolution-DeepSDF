@@ -15,11 +15,13 @@ from hyperparams import *
 # mesh = trimesh.load_mesh('out.stl')
 # mesh.show()
 
+model_dir = 'trained_models/scaled_output'
+save_dir = 'output/' + 'scaled_output/550_epochs_high' + '.stl'
 
 # load model
-model = keras.models.load_model('training_checkpoints_scaled_output')
+model = keras.models.load_model(model_dir)
 model.summary()
 # try marching cubes
 print("extracting")
 
-extract_mesh_from_sdf(0, model, 'output/scaled_output/550_epochs_high.stl', occupancy=False, num_samples=2**25) #2**25 HI, 2**22 default
+extract_mesh_from_sdf(0, model, save_dir, occupancy=False, num_samples=2**25) #2**25 HI, 2**22 default

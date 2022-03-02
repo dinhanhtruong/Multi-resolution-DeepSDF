@@ -70,8 +70,8 @@ def train(data_dir, path):
             avg_loss = np.mean(losses)
             print("epoch loss: ", avg_loss)
 
-            if epoch % 6 == 5:
-                # save model every epoch
+            if epoch % 20 == 19:
+                # save model every few epochs
                 print("saving")
                 model.save(path)
                 print("saved to: ", path)
@@ -122,6 +122,8 @@ def random_ball(num_points, dimension, radius=1):
 
 if __name__ == "__main__":
     # model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
-    model = keras.models.load_model('training_checkpoints_scaled_output')
-    save_path = 'training_checkpoints_scaled_output'
-    train("temp_plane_data", save_path)
+    data_dir = "temp_plane_data"
+    model_dir = 'trained_models/scaled_output'
+    save_dir = 'trained_models/scaled_output'
+    model = keras.models.load_model(model_dir)
+    train(data_dir, save_dir)
