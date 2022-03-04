@@ -49,30 +49,33 @@ def train(data_dir, path):
         if shape_idx != 1:
             continue
         shape_idx = 0
-        # iterate over shapes
-        # convert to sdf
         mesh = trimesh.load(filepath)
-        # TODO: check for bad mash exceptions
-        positions, sdf_vals = sample_sdf_near_surface(mesh, num_sample_points)
-        # convert to occupancy (1 if inside, 0 outside shape)
-        # occupancy_vals = np.where(sdf_vals < 0, 1.0, 0.0)
-        # visualize_sdf_points(positions, occupancy_vals)
+        
         for epoch in range(epochs):
+            # resample from mesh occasionlly
+            if epoch % resample_rate == 0:
+                print("resampling mesh...")
+                # convert to sdf
+                # TODO: check for bad mash exceptions
+                positions, sdf_vals = sample_sdf_near_surface(mesh, num_sample_points)
+                # convert to occupancy (1 if inside, 0 outside shape)
+                occupancy_vals = np.where(sdf_vals < 0, 1.0, 0.0)
+                # visualize_sdf_points(positions, occupancy_vals)
             losses = []
             print("================ epoch: ", epoch)
             # batch
             dataset_positions = tf.data.Dataset.from_tensor_slices(positions)
-            dataset_sdf = tf.data.Dataset.from_tensor_slices(sdf_vals)
+            dataset_sdf = tf.data.Dataset.from_tensor_slices(occupancy_vals)
             dataset = tf.data.Dataset.zip((dataset_positions, dataset_sdf)).shuffle(buffer_size=num_sample_points).batch(batch_sz, drop_remainder=True)
-            for batch_positions, batch_sdf_vals in dataset:
-                losses.append(train_step(shape_idx, batch_positions, batch_sdf_vals).numpy())
+            for batch_positions, batch_occupancy_vals in dataset:
+                losses.append(train_step(shape_idx, batch_positions, batch_occupancy_vals).numpy())
             # extract_mesh_from_sdf(shape_idx, model)
             avg_loss = np.mean(losses)
             print("epoch loss: ", avg_loss)
 
             if epoch % 20 == 19:
                 # save model every few epochs
-                print("saving")
+                print("saving...")
                 model.save(path)
                 print("saved to: ", path)
         break # train for single shape atm
@@ -88,10 +91,10 @@ def visualize_sdf_points(points, sdf_vals):
     scene.add(cloud)
     viewer = pyrender.Viewer(scene, use_raymond_lighting=True, point_size=2)
 
-def extract_mesh_from_sdf(shape_idx, model, filepath, occupancy=False, num_samples=2**25):
+def extract_mesh_from_sdf(shape_idx, model, filepath, occupancy=False, num_samples=2**25, sparse=True):
     sdf = trained_sdf(shape_idx, model, occupancy)
     print("saving mesh")
-    sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)), samples=num_samples, sparse=False)
+    sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)), samples=num_samples, sparse=sparse)
     print("saved mesh at ", filepath)
 
 @sdf3

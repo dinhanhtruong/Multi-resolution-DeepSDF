@@ -15,13 +15,14 @@ from hyperparams import *
 # mesh = trimesh.load_mesh('out.stl')
 # mesh.show()
 
-model_dir = 'trained_models/scaled_output'
-save_dir = 'output/' + 'scaled_output/550_epochs_high' + '.stl'
-
+model_dir = 'trained_models/focal_loss_16hrs' 
+save_dir = 'output/' + 'focal_loss/16hrs_very_high' + '.stl'  # MAKE NEW DIR
+ 
 # load model
 model = keras.models.load_model(model_dir)
 model.summary()
-# try marching cubes
+
+
 print("extracting")
 
-extract_mesh_from_sdf(0, model, save_dir, occupancy=False, num_samples=2**25) #2**25 HI, 2**22 default
+extract_mesh_from_sdf(0, model, save_dir, occupancy=True, num_samples=2**27, sparse=False) #2**25 HI, 2**27 very high, 2**22 default
