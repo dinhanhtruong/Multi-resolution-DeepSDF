@@ -3,6 +3,7 @@ import tensorflow.keras as keras
 from tensorflow.keras.layers import Dense, Dropout, ReLU, Activation, Embedding
 from tensorflow.keras.initializers import RandomNormal
 from tensorflow_addons.layers import WeightNormalization
+import tensorflow_addons as tfa
 
 class DeepSDFDecoder(keras.Model):
     def __init__(self, num_shapes, shape_code_dim, hidden_dim=512, dropout_rate=0.2):
@@ -75,5 +76,6 @@ class DeepSDFDecoder(keras.Model):
         #print("model out: ", sdf_pred.numpy()[:15])
         #print("actual: ", sdf_true[:15])
         # return keras.losses.MeanAbsoluteError()(tf.clip_by_value(sdf_true, -1*clamp_dist, clamp_dist), tf.clip_by_value(sdf_pred, -1*clamp_dist, clamp_dist))
-        return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
+        # return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
+        return tfa.losses.SigmoidFocalCrossEntropy()(sdf_true, sdf_pred)
 
