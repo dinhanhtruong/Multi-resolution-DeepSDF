@@ -14,7 +14,7 @@ from sdf import *
 
 
 # ====== TRAINING STEP FOR SINGLE IMAGE ===============
-@tf.function
+# @tf.function
 def train_step(shape_idx, positions, sdf_true):
     """Trains the model for a SINGLE shape using the positions given as queries to the SDF
     
@@ -29,7 +29,7 @@ def train_step(shape_idx, positions, sdf_true):
         # print("model: ", sdf_pred.numpy()[:10])
         # print("actual: ", sdf_true[:10])
         loss = model.loss(sdf_pred, sdf_true)
-        print("loss: ", loss)
+    # print("loss: ", loss)
 
     # train model params and latent codes jointly
     weight_grads = tape.gradient(loss, model.trainable_variables)
@@ -48,7 +48,7 @@ def train(data_dir, model_save_path, shape_code_save_path):
 
     # TODO: loop over all shapes, convert to SDF, check for bad meshes, enumerate & batch
     for epoch in range(epochs):
-        print("======= epoch: ", epoch)
+        print("======= epoch: ", epoch*3)
 
         # pick random shape 
         shape_idx = random.randint(0,num_shapes-1)
@@ -72,9 +72,7 @@ def train(data_dir, model_save_path, shape_code_save_path):
             # batch
             for batch_positions, batch_occupancy_vals in dataset:
                 losses.append(train_step(shape_idx, batch_positions, batch_occupancy_vals).numpy())
-
-        avg_loss = np.mean(losses)
-        print("3-epoch loss: ", avg_loss)
+            print("epoch loss: ", np.mean(losses))
 
         if epoch % 20 == 19:
             # save model every few epochs
@@ -99,14 +97,14 @@ def visualize_sdf_points(points, sdf_vals):
     scene.add(cloud)
     viewer = pyrender.Viewer(scene, use_raymond_lighting=True, point_size=2)
 
-def extract_mesh_from_sdf(shape_idx, model, filepath, occupancy=False, num_samples=2**25, sparse=True):
-    sdf = trained_sdf(shape_idx, model, occupancy)
+def extract_mesh_from_sdf(shape_code, model, filepath, occupancy=False, num_samples=2**25, sparse=True):
+    sdf = trained_sdf(shape_code, model, occupancy)
     print("saving mesh")
     sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)), samples=num_samples, sparse=sparse)
     print("saved mesh at ", filepath)
 
 @sdf3
-def trained_sdf(shape_idx, model, occupancy=False):
+def trained_sdf(shape_code, model, occupancy=False):
     '''
     Custom SDF function wrapping the trianed SDF model
     Returns
@@ -114,10 +112,10 @@ def trained_sdf(shape_idx, model, occupancy=False):
     '''
     def f(points):
         if occupancy:
-            return -np.squeeze(model([points, shape_idx]).numpy().flatten()) + 0.475 # [N,]  ##================= offset and negate for occupancy only ====
+            return -np.squeeze(model([points, shape_code]).numpy().flatten()) + 0.5 # [N,]  ##================= offset and negate for occupancy only ====
         else:
             # print("f out: ", model.call(points, shape_idx, training=False).numpy().flatten()[:10])
-            return np.squeeze(model([points, shape_idx]).numpy().flatten()) # [N,] 
+            return np.squeeze(model([points, shape_code]).numpy().flatten()) # [N,] 
     return f
 
 def random_ball(num_points, dimension, radius=1):
