@@ -1,3 +1,4 @@
+import random
 import tensorflow as tf
 import tensorflow.keras as keras
 import numpy as np
@@ -8,7 +9,7 @@ from preprocess import get_mesh_files
 from mesh_to_sdf import sample_sdf_near_surface
 import trimesh
 import pyrender
-import mcubes
+# import mcubes
 from sdf import *
 
 
@@ -44,41 +45,44 @@ def train(data_dir, path):
     print(shape_filepaths)
 
     # TODO: loop over all shapes, convert to SDF, check for bad meshes, enumerate & batch
-    for shape_idx, filepath in shape_filepaths.items():
-        # TEMP: TRAIN FOR EASY PLANE at idx 1
-        if shape_idx != 1:
-            continue
-        shape_idx = 0
+    for epoch in range(epochs):
+        print("======= epoch: ", epoch)
+
+        # pick random shape 
+        shape_idx = random.randint(0,num_shapes-1)
+        print("shape idx: ", shape_idx)
+        filepath = shape_filepaths[shape_idx]
         mesh = trimesh.load(filepath)
-        
-        for epoch in range(epochs):
-            # resample from mesh occasionlly
-            if epoch % resample_rate == 0:
-                print("resampling mesh...")
-                # convert to sdf
-                # TODO: check for bad mash exceptions
-                positions, sdf_vals = sample_sdf_near_surface(mesh, num_sample_points)
-                # convert to occupancy (1 if inside, 0 outside shape)
-                occupancy_vals = np.where(sdf_vals < 0, 1.0, 0.0)
-                # visualize_sdf_points(positions, occupancy_vals)
+
+        # convert to sdf
+        # TODO: check for bad mash exceptions? exception can be thrown if < 1.5% of uniformly sampled points have negative SDFs (ie occupied)
+        positions, sdf_vals = sample_sdf_near_surface(mesh, num_sample_points)
+        # convert to occupancy (1 if inside, 0 outside shape)
+        occupancy_vals = np.where(sdf_vals < 0, 1.0, 0.0)
+        # visualize_sdf_points(positions, sdf_vals)
+        dataset_positions = tf.data.Dataset.from_tensor_slices(positions)
+        dataset_sdf = tf.data.Dataset.from_tensor_slices(occupancy_vals)
+        dataset = tf.data.Dataset.zip((dataset_positions, dataset_sdf)).shuffle(buffer_size=num_sample_points).batch(batch_sz, drop_remainder=True)
+
+        # train for 3 epochs
+        for _ in range(3):
             losses = []
-            print("================ epoch: ", epoch)
             # batch
-            dataset_positions = tf.data.Dataset.from_tensor_slices(positions)
-            dataset_sdf = tf.data.Dataset.from_tensor_slices(occupancy_vals)
-            dataset = tf.data.Dataset.zip((dataset_positions, dataset_sdf)).shuffle(buffer_size=num_sample_points).batch(batch_sz, drop_remainder=True)
             for batch_positions, batch_occupancy_vals in dataset:
                 losses.append(train_step(shape_idx, batch_positions, batch_occupancy_vals).numpy())
-            # extract_mesh_from_sdf(shape_idx, model)
-            avg_loss = np.mean(losses)
-            print("epoch loss: ", avg_loss)
 
-            if epoch % 20 == 19:
-                # save model every few epochs
-                print("saving...")
-                model.save(path)
-                print("saved to: ", path)
-        break # train for single shape atm
+        avg_loss = np.mean(losses)
+        print("3-epoch loss: ", avg_loss)
+
+        if epoch % 20 == 19:
+            # save model every few epochs
+            print("saving...")
+            model.save(path)
+            print("saved to: ", path)
+        if epoch % 500 == 499:
+            print("saving checkpoint at ", str(epoch), " epochs")
+            model.save(path+"_"+ str(epoch)+"epochs")
+            print("saved to: ", path)
 
     # extract_mesh_from_sdf(0, model, 'output/out4.stl')
 
@@ -106,7 +110,7 @@ def trained_sdf(shape_idx, model, occupancy=False):
     '''
     def f(points):
         if occupancy:
-            return -np.squeeze(model([points, shape_idx]).numpy().flatten()) + 0.5 # [N,]  ##================= offset and negate for occupancy only ====
+            return -np.squeeze(model([points, shape_idx]).numpy().flatten()) + 0.475 # [N,]  ##================= offset and negate for occupancy only ====
         else:
             # print("f out: ", model.call(points, shape_idx, training=False).numpy().flatten()[:10])
             return np.squeeze(model([points, shape_idx]).numpy().flatten()) # [N,] 
@@ -124,9 +128,10 @@ def random_ball(num_points, dimension, radius=1):
     return radius * (random_directions * random_radii).T
 
 if __name__ == "__main__":
-    # model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
     data_dir = "temp_plane_data"
-    model_dir = 'trained_models/scaled_output'
-    save_dir = 'trained_models/scaled_output'
-    model = keras.models.load_model(model_dir)
+    model_dir = 'trained_models/multishape_5shapes_occupancy'
+    save_dir = 'trained_models/multishape_5shapes_occupancy'
+    model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
+    # model = keras.models.load_model(model_dir)
     train(data_dir, save_dir)
+    

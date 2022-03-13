@@ -76,6 +76,22 @@ class DeepSDFDecoder(keras.Model):
         #print("model out: ", sdf_pred.numpy()[:15])
         #print("actual: ", sdf_true[:15])
         # return keras.losses.MeanAbsoluteError()(tf.clip_by_value(sdf_true, -1*clamp_dist, clamp_dist), tf.clip_by_value(sdf_pred, -1*clamp_dist, clamp_dist))
-        # return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
-        return tfa.losses.SigmoidFocalCrossEntropy()(sdf_true, sdf_pred)
+        return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
+        # return tfa.losses.SigmoidFocalCrossEntropy(gamma=4.0)(sdf_true, sdf_pred)
 
+    def call_interpolate(self, x, shape_idx1, shape_idx2, alpha, training=False):
+        # same as call, but use interpolated feature vector'
+        x
+        shape_code1 = self.latent_shape_code_emb(shape_idx1) #[shape_code_dim,]
+        shape_code2 = self.latent_shape_code_emb(shape_idx2) 
+        # linearly interpolate
+        shape_code = (1-alpha)*shape_code1 + alpha*shape_code2
+        shape_code = tf.repeat(tf.expand_dims(shape_code, axis=0), tf.shape(x)[0], axis=0) # [B, shape_code_dim]
+        input = tf.concat([shape_code, x], axis=1) # [B, (shape_code_dim+3)]
+        intermediate = self.head(input) # [B, hidden-(shape_code_dim+3)]
+        # skip connection
+        intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
+        out = self.tail(intermediate) 
+
+        # print("model out:", out.numpy()[:10])
+        return tf.squeeze(out)
