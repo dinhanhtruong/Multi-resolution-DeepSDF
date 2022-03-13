@@ -2,7 +2,7 @@ import random
 import tensorflow as tf
 import tensorflow.keras as keras
 import numpy as np
-from deepsdf_model import DeepSDFDecoder
+from deepsdf_model import *
 from hyperparams import *
 from sdf import sdf3
 from preprocess import get_mesh_files
@@ -23,21 +23,23 @@ def train_step(shape_idx, positions, sdf_true):
     :param sdf_true: true SDF values of the shape at positions
     :return: None
     """
-    with tf.GradientTape() as tape:
-        sdf_pred = model([positions, shape_idx], training=True)
+    with tf.GradientTape(persistent=True) as tape:
+        shape_code = shape_codes(shape_idx)
+        sdf_pred = model([positions, shape_code], training=True)
         # print("model: ", sdf_pred.numpy()[:10])
         # print("actual: ", sdf_true[:10])
-        loss = model.loss(sdf_pred, sdf_true, clamping_dist)
-        # print("loss: ", loss)
+        loss = model.loss(sdf_pred, sdf_true)
+        print("loss: ", loss)
 
-    # print("loss: ", loss)
     # train model params and latent codes jointly
-    grads = tape.gradient(loss, model.trainable_variables)
-    optimizer.apply_gradients(zip(grads, model.trainable_variables))
+    weight_grads = tape.gradient(loss, model.trainable_variables)
+    weight_optimizer.apply_gradients(zip(weight_grads, model.trainable_variables))
+    shape_code_grads = tape.gradient(loss, shape_codes.trainable_variables)
+    shape_code_optimizer.apply_gradients(zip(shape_code_grads, shape_codes.trainable_variables))
     return loss
 
 # ====== MAIN TRAINING LOOP ===============
-def train(data_dir, path):
+def train(data_dir, model_save_path, shape_code_save_path):
     
 
     # get lexicographically ordered filepaths
@@ -77,12 +79,14 @@ def train(data_dir, path):
         if epoch % 20 == 19:
             # save model every few epochs
             print("saving...")
-            model.save(path)
-            print("saved to: ", path)
+            model.save(model_save_path)
+            shape_codes.save(shape_code_save_path)
+            print("saved to: ", model_save_path)
         if epoch % 500 == 499:
             print("saving checkpoint at ", str(epoch), " epochs")
-            model.save(path+"_"+ str(epoch)+"epochs")
-            print("saved to: ", path)
+            model.save(model_save_path+"_"+ str(epoch)+"epochs")
+            shape_codes.save(shape_code_save_path+"_"+ str(epoch)+"epochs")
+            print("saved to: ", model_save_path)
 
     # extract_mesh_from_sdf(0, model, 'output/out4.stl')
 
@@ -129,9 +133,18 @@ def random_ball(num_points, dimension, radius=1):
 
 if __name__ == "__main__":
     data_dir = "temp_plane_data"
-    model_dir = 'trained_models/multishape_5shapes_occupancy'
-    save_dir = 'trained_models/multishape_5shapes_occupancy'
+    trained_model_dir = 'multishape_5shapes_occupancy'
+    save_dir = 'multishape_5shapes_occupancy_1e-3emb'
+
+    trained_model_path = 'trained_models/' + trained_model_dir + '_model'
+    trained_shape_code_path = 'trained_models/' + trained_model_dir + '_emb'
+    model_save_path = 'trained_models/' + save_dir + '_model'
+    shape_code_save_path = 'trained_models/' + save_dir + '_emb'
+
     model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
+    shape_codes = ShapeCodeEmbedding(num_shapes, shape_code_dim)
     # model = keras.models.load_model(model_dir)
-    train(data_dir, save_dir)
+    # shape_codes = keras.models.load_model(model_dir)
+
+    train(data_dir, model_save_path, shape_code_save_path)
     

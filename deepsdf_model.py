@@ -4,14 +4,24 @@ from tensorflow.keras.layers import Dense, Dropout, ReLU, Activation, Embedding
 from tensorflow.keras.initializers import RandomNormal
 from tensorflow_addons.layers import WeightNormalization
 import tensorflow_addons as tfa
+from hyperparams import *
+
+# store shape codes in separate embedding class
+class ShapeCodeEmbedding(keras.Model):
+    def __init__(self, num_shapes, shape_code_dim):
+        super(ShapeCodeEmbedding, self).__init__()
+
+        emb_init = RandomNormal(mean=0.0, stddev=0.01, seed=None)
+        self.latent_shape_code_emb = Embedding(num_shapes, shape_code_dim, embeddings_initializer=emb_init)
+
+    def call(self, shape_idx):
+        return self.latent_shape_code_emb(shape_idx)
 
 class DeepSDFDecoder(keras.Model):
     def __init__(self, num_shapes, shape_code_dim, hidden_dim=512, dropout_rate=0.2):
         super(DeepSDFDecoder, self).__init__()
 
-        # store shape codes in trainable embedding layer 
-        emb_init = RandomNormal(mean=0.0, stddev=0.01, seed=None)
-        self.latent_shape_code_emb = Embedding(num_shapes, shape_code_dim, embeddings_initializer=emb_init)
+        
 
         # Head: 4 FC layers [B, (shape_code_dim+3)] -> [B, (hidden-(shape_code_dim+3))]
         # TODO: try WeightNorm
@@ -53,24 +63,19 @@ class DeepSDFDecoder(keras.Model):
         Returns:
             predicted sdf: [B,]
         """
-        x, shape_idx = input
-        # x, shape_idx = input
-        # print("x in:", x[:6])
-        shape_code = self.latent_shape_code_emb(shape_idx) #[shape_code_dim,]
-        # print("shape code: ", shape_code.numpy()[:10])
+        x, shape_code = input
+        # repeat shape code for each ex
         shape_code = tf.repeat(tf.expand_dims(shape_code, axis=0), tf.shape(x)[0], axis=0) # [B, shape_code_dim]
-        # print("shape code shape:", shape_code.shape)
         input = tf.concat([shape_code, x], axis=1) # [B, (shape_code_dim+3)]
         intermediate = self.head(input) # [B, hidden-(shape_code_dim+3)]
         # skip connection
         intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
         out = self.tail(intermediate) 
 
-        # print("model out:", out.numpy()[:10])
         return tf.squeeze(out)
 
     @tf.function
-    def loss(self, sdf_pred, sdf_true, clamp_dist):
+    def loss(self, sdf_pred, sdf_true):
         sdf_pred = tf.expand_dims(sdf_pred, axis=1)
         sdf_true = tf.expand_dims(sdf_true, axis=1)
         #print("model out: ", sdf_pred.numpy()[:15])
@@ -78,20 +83,3 @@ class DeepSDFDecoder(keras.Model):
         # return keras.losses.MeanAbsoluteError()(tf.clip_by_value(sdf_true, -1*clamp_dist, clamp_dist), tf.clip_by_value(sdf_pred, -1*clamp_dist, clamp_dist))
         return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
         # return tfa.losses.SigmoidFocalCrossEntropy(gamma=4.0)(sdf_true, sdf_pred)
-
-    def call_interpolate(self, x, shape_idx1, shape_idx2, alpha, training=False):
-        # same as call, but use interpolated feature vector'
-        x
-        shape_code1 = self.latent_shape_code_emb(shape_idx1) #[shape_code_dim,]
-        shape_code2 = self.latent_shape_code_emb(shape_idx2) 
-        # linearly interpolate
-        shape_code = (1-alpha)*shape_code1 + alpha*shape_code2
-        shape_code = tf.repeat(tf.expand_dims(shape_code, axis=0), tf.shape(x)[0], axis=0) # [B, shape_code_dim]
-        input = tf.concat([shape_code, x], axis=1) # [B, (shape_code_dim+3)]
-        intermediate = self.head(input) # [B, hidden-(shape_code_dim+3)]
-        # skip connection
-        intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
-        out = self.tail(intermediate) 
-
-        # print("model out:", out.numpy()[:10])
-        return tf.squeeze(out)
