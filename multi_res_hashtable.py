@@ -9,12 +9,8 @@ from hyperparams import *
 class MultiResolutionHashEncoding(keras.Model):
     def __init__(self, table_sz=2**14, max_resolution=512, feature_dim=2):
         super(MultiResolutionHashEncoding, self).__init__()
-        # OLD
         emb_init = RandomUniform(-10**-4, 10**-4)
-        self.latent_shape_code_emb = Embedding(num_shapes, shape_code_dim, embeddings_initializer=emb_init)
-        #==
 
-        #TODO: initialize emb?
         self.feature_dim = feature_dim
         self.min_resolution = 16
         self.max_resolution = max_resolution
@@ -22,26 +18,26 @@ class MultiResolutionHashEncoding(keras.Model):
         # num tables = fixed = 16
         self.num_levels = 16
         #TODO: use 3D tensor and gather() instead?
-        self.table1 = Embedding(table_sz, feature_dim)
-        self.table2 = Embedding(table_sz, feature_dim)
-        self.table3 = Embedding(table_sz, feature_dim)
-        self.table4 = Embedding(table_sz, feature_dim)
-        self.table5 = Embedding(table_sz, feature_dim)
-        self.table6 = Embedding(table_sz, feature_dim)
-        self.table7 = Embedding(table_sz, feature_dim)
-        self.table8 = Embedding(table_sz, feature_dim)
-        self.table9 = Embedding(table_sz, feature_dim)
-        self.table10 = Embedding(table_sz, feature_dim)
-        self.table11 = Embedding(table_sz, feature_dim)
-        self.table12 = Embedding(table_sz, feature_dim)
-        self.table13 = Embedding(table_sz, feature_dim)
-        self.table14 = Embedding(table_sz, feature_dim)
-        self.table15 = Embedding(table_sz, feature_dim)
-        self.table16 = Embedding(table_sz, feature_dim)
+        self.table1 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table2 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table3 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table4 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table5 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table6 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table7 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table8 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table9 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table10 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table11 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table12 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table13 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table14 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table15 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table16 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
 
         self.hashtables = [self.table1, self.table2, self.table3, self.table4, self.table5, self.table6, 
         self.table7, self.table8, self.table9, self.table10,
-        self.table11, self.table2, self.table13, self.table14, self.table15, self.table16]
+        self.table11, self.table12, self.table13, self.table14, self.table15, self.table16]
 
 
     def call(self, x):
@@ -68,13 +64,8 @@ class MultiResolutionHashEncoding(keras.Model):
             # concatenate current resolution's feature to final feature vec
             if final_feature is None:
                 final_feature = interpolated_feat #[B, feat_dim]
-                print("1st final")
             else:
-                print("2nd final")
-                print("adding: ", interpolated_feat.shape)
-                print("prev: ", final_feature.shape)
                 final_feature = tf.concat([final_feature, interpolated_feat], axis=1) # [B, current+feat_dim]
-                print("new:", final_feature.shape)
         return final_feature # [B, l*feat_dim]
         
     def get_nearest_vertices_coords(self, unscaled_position, curr_resolution):
@@ -155,15 +146,15 @@ class MultiResolutionHashEncoding(keras.Model):
         # 1D linear interp 
         return c0*(1-z_weight) + c1*z_weight
 
-#=======TESTING ============
+# #=======TESTING ============
 
-model = MultiResolutionHashEncoding()
-x = [
-    [0.1, 0.5, 0.9],
-    [0.3, 0.35, 0.71]
-]
-x = tf.convert_to_tensor(x)
-print(model(x))
+# model = MultiResolutionHashEncoding()
+# x = [
+#     [0.1, 0.5, 0.9],
+#     [0.3, 0.35, 0.71]
+# ]
+# x = tf.convert_to_tensor(x)
+# print(model(x))
 
 
 

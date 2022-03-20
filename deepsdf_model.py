@@ -18,24 +18,26 @@ class ShapeCodeEmbedding(keras.Model):
         return self.latent_shape_code_emb(shape_idx)
 
 class DeepSDFDecoder(keras.Model):
-    def __init__(self, num_shapes, shape_code_dim, hidden_dim=512, dropout_rate=0.2):
+    def __init__(self, shape_code_dim, encoded_pos_dim, hidden_dim=512, dropout_rate=0.2):
         super(DeepSDFDecoder, self).__init__()
 
         
 
         # Head: 4 FC layers [B, (shape_code_dim+3)] -> [B, (hidden-(shape_code_dim+3))]
-        # TODO: try WeightNorm
+
+        # TODO: L2 reg w factor 1e-6
+
         self.head = keras.Sequential([
             Dense(hidden_dim),
             Dropout(dropout_rate),
             ReLU(name='head_relu_1'),
-            Dense(hidden_dim),
-            Dropout(dropout_rate),
-            ReLU(name='head_relu_2'),
+            # Dense(hidden_dim),
+            # Dropout(dropout_rate),
+            # ReLU(name='head_relu_2'),
             Dense(hidden_dim),
             Dropout(dropout_rate),
             ReLU(name='head_relu_3'),
-            Dense(hidden_dim-(shape_code_dim+3)),
+            Dense(hidden_dim - (shape_code_dim + encoded_pos_dim)),
             Dropout(dropout_rate),
             ReLU(name='head_relu_4'),
         ])
@@ -45,14 +47,14 @@ class DeepSDFDecoder(keras.Model):
             Dense(hidden_dim),
             Dropout(dropout_rate),
             ReLU(name='tail_relu_1'),
-            Dense(hidden_dim),
-            Dropout(dropout_rate),
-            ReLU(name='tail_relu_2'),
+            # Dense(hidden_dim),
+            # Dropout(dropout_rate),
+            # ReLU(name='tail_relu_2'),
             Dense(hidden_dim),
             Dropout(dropout_rate),
             ReLU(name='tail_relu_3'),
-            Dense(7),
-            # Activation('sigmoid') # was tanh
+            Dense(1),
+            Activation('sigmoid') # was tanh
         ])
 
     def call(self, input, training=False):
@@ -61,26 +63,18 @@ class DeepSDFDecoder(keras.Model):
         Params:
             input: LIST of [positions, shape_idx] where positions is Bx3 and shape_idx is a scalar
         Returns:
-            occupancy [B,]
+            predicted sdf: [B,]
         """
         x, shape_code = input
         # repeat shape code for each ex
         shape_code = tf.repeat(tf.expand_dims(shape_code, axis=0), tf.shape(x)[0], axis=0) # [B, shape_code_dim]
-        input = tf.concat([shape_code, x], axis=1) # [B, (shape_code_dim+3)]
-        intermediate = self.head(input) # [B, hidden-(shape_code_dim+3)]
+        input = tf.concat([shape_code, x], axis=1) # [B, (shape_code_dim + x_dim)]
+        intermediate = self.head(input) # [B, hidden-(shape_code_dim + x_dim)]
         # skip connection
         intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
+        out = self.tail(intermediate) 
 
-        #TODO: change tail 
-        out = self.tail(intermediate)  #[B, 7]
-        # clamp s = out[0]
-        s, center_x, center_y, center_z, r_x, r_y, r_z = tf.split(out, 7, axis=1) # 7*[B, 1]
-        center = tf.concat([center_x, center_y, center_z], axis=1) # [B,3]
-        radius = tf.concat([r_x, r_y, r_z], axis=1)
-        s = tf.clip_by_value(s, 1*2**(-20), 1)
-        prob = tf.squeeze(s) * tf.exp(tf.reduce_sum( -(center - x)**2/(2*radius**2), axis=1 )) # [B,3] -> [B,]
-
-        return prob
+        return tf.squeeze(out)
 
     @tf.function
     def loss(self, sdf_pred, sdf_true):

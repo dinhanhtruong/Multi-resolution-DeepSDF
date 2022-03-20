@@ -11,7 +11,7 @@ import pyrender
 import mcubes
 from sdf import *
 
-model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
+model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, MLP_dropout_rate)
 # # Build the model by calling it
 x = tf.ones((1, 3))
 idx = 0

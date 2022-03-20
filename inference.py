@@ -14,26 +14,31 @@ from hyperparams import *
 
 # mesh = trimesh.load_mesh('out.stl')
 # mesh.show()
-model_path = 'trained_models/' + 'multishape_5shapes_gaussian_model_2000epochs'
-shape_code_path = 'trained_models/' + 'multishape_5shapes_gaussian_emb_2000epochs'
+hashtable_save_path = 'trained_models/' + 'hashtable/test2/base_4layers_512res_2e14table_table'
+shape_code_path = 'trained_models/' + 'hashtable/test2/base_4layers_512res_2e14table_emb'
+model_path = 'trained_models/' + 'hashtable/test2/base_4layers_512res_2e14table_model'
 
-save_dir = 'output/' + 'multishape/5shapes_occupancy_2000epochs_shape4_0475ls' + '.stl'  # MAKE NEW DIR
+
+save_dir = 'output/' + 'hashtable/base/base_4layers_512res_2e14table_450epochs' + '.stl'  # MAKE NEW DIR
 
 # load model
+hashtable_enc = keras.models.load_model(hashtable_save_path)
 model = keras.models.load_model(model_path)
 shape_codes = keras.models.load_model(shape_code_path)
+hashtable_enc.summary()
 model.summary()
 shape_codes.summary()
 
 
 print("extracting")
+shape_idx = 1
+shape_code = shape_codes(shape_idx)
+# print(shape_code[:20])
+extract_mesh_from_sdf(hashtable_enc, shape_code, model, save_dir, occupancy=True, num_samples=2**25, sparse=True) #2**25 HI, 2**27 very high, 2**22 default
 
-# extract_mesh_from_sdf(4, model, save_dir, occupancy=True, num_samples=2**27, sparse=False) #2**25 HI, 2**27 very high, 2**22 default
 
-
-
-for shape_idx in range(num_shapes):
-    save_dir = 'output/' + 'multishape/gaussian/5shapes_gaussian_model_2000epochs' + '_shape'+str(shape_idx) + '.stl'  # MAKE NEW DIR
-    shape_code = shape_codes(shape_idx)
-    # print(shape_code[:20])
-    extract_mesh_from_sdf(shape_code, model, save_dir, occupancy=True, num_samples=2**27, sparse=False) #2**25 HI, 2**27 very high, 2**22 default
+# for shape_idx in range(num_shapes):
+#     save_dir = 'output/' + 'multishape/gaussian/5shapes_gaussian_model_2000epochs' + '_shape'+str(shape_idx) + '.stl'  # MAKE NEW DIR
+#     shape_code = shape_codes(shape_idx)
+#     # print(shape_code[:20])
+#     extract_mesh_from_sdf(shape_code, model, save_dir, occupancy=True, num_samples=2**27, sparse=False) #2**25 HI, 2**27 very high, 2**22 default
