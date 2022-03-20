@@ -16,7 +16,6 @@ temp_plane_data/1a9b552befd6306cc8f2d5fe7449af61/images/texture3.png
 temp_plane_data/1a9b552befd6306cc8f2d5fe7449af61/images/texture4.png
 temp_plane_data/1a9b552befd6306cc8f2d5fe7449af61/model.mtl
 temp_plane_data/1a9b552befd6306cc8f2d5fe7449af61/model.obj
-train.py
 training_checkpoints/checkpoint
 training_checkpoints/checkpoint-1.data-00000-of-00001
 training_checkpoints/checkpoint-1.index
@@ -434,3 +433,4 @@ temp_plane_data/1a32f10b20170883663e90eaf6b4ca52/model.mtl
 temp_plane_data/1a04e3eab45ca15dd86060f189eb133/model.obj
 temp_plane_data/1a04e3eab45ca15dd86060f189eb133/model.mtl
 *.pyc
+*.stl

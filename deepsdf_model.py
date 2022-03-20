@@ -51,8 +51,8 @@ class DeepSDFDecoder(keras.Model):
             Dense(hidden_dim),
             Dropout(dropout_rate),
             ReLU(name='tail_relu_3'),
-            Dense(1),
-            Activation('sigmoid') # was tanh
+            Dense(7),
+            # Activation('sigmoid') # was tanh
         ])
 
     def call(self, input, training=False):
@@ -61,7 +61,7 @@ class DeepSDFDecoder(keras.Model):
         Params:
             input: LIST of [positions, shape_idx] where positions is Bx3 and shape_idx is a scalar
         Returns:
-            predicted sdf: [B,]
+            occupancy [B,]
         """
         x, shape_code = input
         # repeat shape code for each ex
@@ -70,9 +70,17 @@ class DeepSDFDecoder(keras.Model):
         intermediate = self.head(input) # [B, hidden-(shape_code_dim+3)]
         # skip connection
         intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
-        out = self.tail(intermediate) 
 
-        return tf.squeeze(out)
+        #TODO: change tail 
+        out = self.tail(intermediate)  #[B, 7]
+        # clamp s = out[0]
+        s, center_x, center_y, center_z, r_x, r_y, r_z = tf.split(out, 7, axis=1) # 7*[B, 1]
+        center = tf.concat([center_x, center_y, center_z], axis=1) # [B,3]
+        radius = tf.concat([r_x, r_y, r_z], axis=1)
+        s = tf.clip_by_value(s, 1*2**(-20), 1)
+        prob = tf.squeeze(s) * tf.exp(tf.reduce_sum( -(center - x)**2/(2*radius**2), axis=1 )) # [B,3] -> [B,]
+
+        return prob
 
     @tf.function
     def loss(self, sdf_pred, sdf_true):

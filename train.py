@@ -14,7 +14,7 @@ from sdf import *
 
 
 # ====== TRAINING STEP FOR SINGLE IMAGE ===============
-# @tf.function
+@tf.function
 def train_step(shape_idx, positions, sdf_true):
     """Trains the model for a SINGLE shape using the positions given as queries to the SDF
     
@@ -74,7 +74,7 @@ def train(data_dir, model_save_path, shape_code_save_path):
                 losses.append(train_step(shape_idx, batch_positions, batch_occupancy_vals).numpy())
             print("epoch loss: ", np.mean(losses))
 
-        if epoch % 20 == 19:
+        if epoch % 14 == 13:
             # save model every few epochs
             print("saving...")
             model.save(model_save_path)
@@ -131,18 +131,18 @@ def random_ball(num_points, dimension, radius=1):
 
 if __name__ == "__main__":
     data_dir = "temp_plane_data"
-    trained_model_dir = 'multishape_5shapes_occupancy'
-    save_dir = 'multishape_5shapes_occupancy_1e-3emb'
+    trained_model_dir = 'multishape_5shapes_gaussian'
+    save_dir = 'multishape_5shapes_gaussian'
 
     trained_model_path = 'trained_models/' + trained_model_dir + '_model'
     trained_shape_code_path = 'trained_models/' + trained_model_dir + '_emb'
     model_save_path = 'trained_models/' + save_dir + '_model'
     shape_code_save_path = 'trained_models/' + save_dir + '_emb'
 
-    model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
-    shape_codes = ShapeCodeEmbedding(num_shapes, shape_code_dim)
-    # model = keras.models.load_model(model_dir)
-    # shape_codes = keras.models.load_model(model_dir)
+    # model = DeepSDFDecoder(num_shapes, shape_code_dim, hidden_dim, dropout_rate)
+    # shape_codes = ShapeCodeEmbedding(num_shapes, shape_code_dim)
+    model = keras.models.load_model(model_save_path)
+    shape_codes = keras.models.load_model(shape_code_save_path)
 
     train(data_dir, model_save_path, shape_code_save_path)
     
