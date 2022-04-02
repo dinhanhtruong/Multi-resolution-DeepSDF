@@ -51,11 +51,12 @@ class MultiResolutionHashEncoding(keras.Model):
 
         # get scaling factor for resolution 
         max_res = tf.cast(self.max_resolution, tf.float32)
-        min_res = tf.cast(self.max_resolution, tf.float32)
+        min_res = tf.cast(self.min_resolution, tf.float32)
         b = tf.exp((tf.math.log(max_res) - tf.math.log(min_res)) / (self.num_levels-1))
         
         # for each res, find current voxel, hash corner indices, trilinearly interpolate features
         final_feature = None
+        
         for curr_level, table in enumerate(self.hashtables):
             curr_resolution = tf.math.floor(self.min_resolution * b**curr_level)
             verts = self.get_nearest_vertices_coords(x, curr_resolution) # [B, 8,3] = x/y/z for each of the 8 vertices

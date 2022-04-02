@@ -27,22 +27,22 @@ class DeepSDFDecoder(keras.Model):
 
         # TODO: L2 reg w factor 1e-6
 
-        self.head = keras.Sequential([
-            Dense(hidden_dim),
-            Dropout(dropout_rate),
-            ReLU(name='head_relu_1'),
-            # Dense(hidden_dim),
-            # Dropout(dropout_rate),
-            # ReLU(name='head_relu_2'),
-            Dense(hidden_dim),
-            Dropout(dropout_rate),
-            ReLU(name='head_relu_3'),
-            Dense(hidden_dim - (shape_code_dim + encoded_pos_dim)),
-            Dropout(dropout_rate),
-            ReLU(name='head_relu_4'),
-        ])
+        # self.head = keras.Sequential([
+        #     # Dense(hidden_dim),
+        #     # Dropout(dropout_rate),
+        #     # ReLU(name='head_relu_1'),
+        #     # Dense(hidden_dim),
+        #     # Dropout(dropout_rate),
+        #     # ReLU(name='head_relu_2'),
+        #     Dense(hidden_dim),
+        #     Dropout(dropout_rate),
+        #     ReLU(name='head_relu_3'),
+        #     Dense(hidden_dim - (shape_code_dim + encoded_pos_dim)),
+        #     Dropout(dropout_rate),
+        #     ReLU(name='head_relu_4'),
+        # ])
 
-        # Tail: 4 FC layers + tanh output activation [B, 512] -> [B,1]
+        # Tail: 4 FC layers + tanh output activation [B, _] -> [B,1]
         self.tail = keras.Sequential([
             Dense(hidden_dim),
             Dropout(dropout_rate),
@@ -54,7 +54,7 @@ class DeepSDFDecoder(keras.Model):
             Dropout(dropout_rate),
             ReLU(name='tail_relu_3'),
             Dense(1),
-            Activation('sigmoid') # was tanh
+            Activation('tanh') # was tanh
         ])
 
     def call(self, input, training=False):
@@ -65,14 +65,16 @@ class DeepSDFDecoder(keras.Model):
         Returns:
             predicted sdf: [B,]
         """
-        x, shape_code = input
+        # position, encoded_position, shape_code = input
         # repeat shape code for each ex
-        shape_code = tf.repeat(tf.expand_dims(shape_code, axis=0), tf.shape(x)[0], axis=0) # [B, shape_code_dim]
-        input = tf.concat([shape_code, x], axis=1) # [B, (shape_code_dim + x_dim)]
-        intermediate = self.head(input) # [B, hidden-(shape_code_dim + x_dim)]
-        # skip connection
-        intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
-        out = self.tail(intermediate) 
+        # shape_code = tf.repeat(tf.expand_dims(shape_code, axis=0), tf.shape(position)[0], axis=0) # [B, shape_code_dim]
+        # input = tf.concat([shape_code, position, encoded_position], axis=1) # [B, (shape_code_dim + x_dim)]
+        # intermediate = self.head(input) # [B, hidden-(shape_code_dim + x_dim)]
+        # # skip connection
+        # intermediate = tf.concat([intermediate, input], axis=1) # [B, hidden_dim]
+        # out = self.tail(intermediate) 
+
+        out = self.tail(input)
 
         return tf.squeeze(out)
 
@@ -83,5 +85,6 @@ class DeepSDFDecoder(keras.Model):
         #print("model out: ", sdf_pred.numpy()[:15])
         #print("actual: ", sdf_true[:15])
         # return keras.losses.MeanAbsoluteError()(tf.clip_by_value(sdf_true, -1*clamp_dist, clamp_dist), tf.clip_by_value(sdf_pred, -1*clamp_dist, clamp_dist))
-        return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
+        return keras.losses.MeanAbsoluteError()(sdf_pred, sdf_true)
+        # return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
         # return tfa.losses.SigmoidFocalCrossEntropy(gamma=4.0)(sdf_true, sdf_pred)
