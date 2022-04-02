@@ -66,6 +66,7 @@ class MultiResolutionHashEncoding(keras.Model):
             if final_feature is None:
                 final_feature = interpolated_feat #[B, feat_dim]
             else:
+                #TODO: append to list and stack instead
                 final_feature = tf.concat([final_feature, interpolated_feat], axis=1) # [B, current+feat_dim]
         return final_feature # [B, l*feat_dim]
         

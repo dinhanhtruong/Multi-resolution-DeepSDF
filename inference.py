@@ -8,9 +8,9 @@ from train import extract_mesh_from_sdf, visualize_sdf_points
 from preprocess import get_mesh_files
 from mesh_to_sdf import sample_sdf_near_surface
 import trimesh
-import pyrender
 from sdf import *
 from hyperparams import *
+from mcwrapper import extract_mesh_mcubes
 
 # ========== NOTE: MUST MAKE DIRECTORY FIRST! ===============#
 trained_dir =  'hashtable/base5/2layers_sdf_shifted_2e18res_2e18table'
@@ -37,9 +37,10 @@ print("extracting")
 shape_idx = 1
 # shape_code = shape_codes(shape_idx)
 # print(shape_code[:20])
+
 extract_mesh_from_sdf(hashtable_enc, model, save_dir, occupancy=False, num_samples=2**24, sparse=False) #2**25 HI, 2**27 very high, 2**22 default
-
-
+# extract_mesh_mcubes(hashtable_enc, model, save_dir)
+print("done")
 # for shape_idx in range(num_shapes):
 #     save_dir = 'output/' + 'multishape/gaussian/5shapes_gaussian_model_2000epochs' + '_shape'+str(shape_idx) + '.stl'  # MAKE NEW DIR
 #     shape_code = shape_codes(shape_idx)

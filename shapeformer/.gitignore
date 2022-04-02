@@ -1,0 +1,6 @@
+lightning_logs/**
+out/**
+**/__pycache__/**
+data/**
+.vscode/**
+weight_encoded_implicits_utils/**

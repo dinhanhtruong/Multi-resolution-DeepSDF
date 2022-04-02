@@ -125,31 +125,6 @@ def visualize_sdf_points(points, sdf_vals):
     scene.add(cloud)
     viewer = pyrender.Viewer(scene, use_raymond_lighting=True, point_size=2)
 
-def extract_mesh_from_sdf(hashtable, model, filepath, occupancy=False, num_samples=2**25, sparse=False):
-    # sdf = trained_sdf(hashtable, shape_code, model, occupancy)
-    sdf = trained_sdf(hashtable, model, occupancy)
-    print("saving mesh")
-    # sdf.save(filepath, bounds=((-1, -1, -1), (1, 1, 1)), samples=num_samples, sparse=sparse)
-    sdf.save(filepath, bounds=((0, 0, 0), (1, 1, 1)), samples=num_samples, sparse=sparse)
-    print("saved mesh at ", filepath)
-
-@sdf3
-def trained_sdf(hashtable, model, occupancy=False):
-    '''
-    Custom SDF function wrapping the trianed SDF model
-    Returns
-        f: function representing SDF
-    '''
-    def f(points):
-        if occupancy:
-            encoded_positions = hashtable(points)
-            out = -np.squeeze(model(encoded_positions).numpy().flatten()) + 0.5
-            return out # [N,]  ##================= offset and negate for occupancy only ====
-        else:
-            # print("f out: ", model.call(points, shape_idx, training=False).numpy().flatten()[:10])
-            encoded_positions = hashtable(points)
-            return np.squeeze(model(encoded_positions).numpy().flatten()) # [N,] 
-    return f
 
 def random_ball(num_points, dimension, radius=1):
     # First generate random directions by normalizing the length of a
@@ -162,11 +137,13 @@ def random_ball(num_points, dimension, radius=1):
     # Return the list of random (direction & length) points.
     return radius * (random_directions * random_radii).T
 
-# def random_cube_coords(num_points, side_len=2):
+def random_cube_coords(num_points, lower_bound, upper_bound):
+    # generate rand points in bounds
+    return np.random.uniform(low=lower_bound, high=upper_bound, size=(num_points, 3))
 
 
 if __name__ == "__main__":
-    data_dir = "temp_plane_data"
+    data_dir = "plane_data"
     trained_model_dir = 'hashtable/base5/2layers_sdf_shifted_2e18res_2e18table'
     save_dir = 'hashtable/base5/2layers_sdf_shifted_2e18res_2e18table'
 
