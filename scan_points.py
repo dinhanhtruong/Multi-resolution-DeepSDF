@@ -12,9 +12,16 @@ sample_cloud = True
 
 # these should be paths to folders that contain a `model_normalized.obj`
 PATHS = [
-        "temp_plane_data/plane1/",
-        "temp_plane_data/plane2/",
+        
+        "temp_plane_data/cube_60w/",
+        # "temp_plane_data/sphere/",
+        # "temp_plane_data/plane1/",
+
+        # "temp_plane_data/plane2/"
 ]
+
+NUM_SURFACE_POINTS = 500000 #10000
+EXPONENTIAL_SAMPLE_WEIGHT = 60 # 20  higher = more concentrated near surface
 
 for prefix in PATHS:
     print("Loading trimesh")
@@ -24,7 +31,7 @@ for prefix in PATHS:
 
         print("Sampling Surface")
         surface_sampler = geometry.PointSampler(mesh, ratio=0.0, std=0.0)
-        surface_points = surface_sampler.sample(10_000)
+        surface_points = surface_sampler.sample(NUM_SURFACE_POINTS)
 
         print("Saving surface numpy array")
         np.savez(prefix + "surface_points.npz", surface_points=surface_points)
@@ -40,7 +47,7 @@ for prefix in PATHS:
         sdf = geometry.SDF(mesh)
 
         print("Sampling cloud")
-        importanceSampler = geometry.ImportanceSampler(mesh, 10_000_000, 20)
+        importanceSampler = geometry.ImportanceSampler(mesh, 10_000_000, EXPONENTIAL_SAMPLE_WEIGHT)
         weighted_points = importanceSampler.sample(1_000_000)
 
         uniform_points = geometry.PointSampler(mesh, ratio=1.0, std=0.0).sample(100_000)

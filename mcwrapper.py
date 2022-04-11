@@ -11,7 +11,7 @@ def extract_mesh_mcubes(hashtable, model, save_path, occupancy=False,):
     # descriptor = torch.from_numpy(descriptor).float().to(device)
 
     # Pick a uniform grid to sample from
-    resolution = 170
+    resolution = 150
     xs, ys, zs = np.meshgrid(
         np.linspace(0, 1, resolution),
         np.linspace(0, 1, resolution),
@@ -33,7 +33,8 @@ def extract_mesh_mcubes(hashtable, model, save_path, occupancy=False,):
 
     encoded_positions = hashtable(points_to_sample)
     preds = -model(encoded_positions).numpy()
-    print(preds[:20])
+    print("pos:", points_to_sample[:20])
+    print("preds: ", preds[:20])
 
     points_to_sample = points_to_sample.reshape(-1,3)
 
@@ -48,7 +49,7 @@ def extract_mesh_mcubes(hashtable, model, save_path, occupancy=False,):
 
     if USE_MARCHING_CUBES:
         vertices, triangles = mcubes.marching_cubes(preds, THRESHOLD)
-        mcubes.export_obj(vertices, triangles, save_path)
+        mcubes.export_obj(vertices, triangles, save_path+'.obj' )
         # mcubes.export_obj(vertices, triangles, f'./out/mesh_{i}.obj')
     # else:
     #     reconstructed_point_cloud = points_to_sample[preds > THRESHOLD]

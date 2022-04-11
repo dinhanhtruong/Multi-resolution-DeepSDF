@@ -44,17 +44,17 @@ class DeepSDFDecoder(keras.Model):
 
         # Tail: 4 FC layers + tanh output activation [B, _] -> [B,1]
         self.tail = keras.Sequential([
-            Dense(hidden_dim),
-            Dropout(dropout_rate),
+            Dense(hidden_dim, kernel_regularizer=tf.keras.regularizers.L2(1e-6)),
+            # Dropout(dropout_rate),
             ReLU(name='tail_relu_1'),
             # Dense(hidden_dim),
             # Dropout(dropout_rate),
             # ReLU(name='tail_relu_2'),
-            Dense(hidden_dim),
-            Dropout(dropout_rate),
-            ReLU(name='tail_relu_3'),
+            Dense(hidden_dim, kernel_regularizer=tf.keras.regularizers.L2(1e-6)),
+            # Dropout(dropout_rate),
+            # ReLU(name='tail_relu_3'),
             Dense(1),
-            Activation('tanh') # was tanh
+            # Activation('tanh') # was tanh
         ])
 
     def call(self, input, training=False):
@@ -86,5 +86,6 @@ class DeepSDFDecoder(keras.Model):
         #print("actual: ", sdf_true[:15])
         # return keras.losses.MeanAbsoluteError()(tf.clip_by_value(sdf_true, -1*clamp_dist, clamp_dist), tf.clip_by_value(sdf_pred, -1*clamp_dist, clamp_dist))
         return keras.losses.MeanAbsoluteError()(sdf_pred, sdf_true)
+        # return keras.losses.MeanAbsolutePercentageError()(sdf_pred, sdf_true)
         # return keras.losses.BinaryCrossentropy()(sdf_true, sdf_pred)
         # return tfa.losses.SigmoidFocalCrossEntropy(gamma=4.0)(sdf_true, sdf_pred)

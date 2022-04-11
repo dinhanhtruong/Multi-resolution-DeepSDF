@@ -4,45 +4,45 @@ from matplotlib import pyplot
 import numpy as np
 from deepsdf_model import DeepSDFDecoder
 from sdf import sdf3
-from train import extract_mesh_from_sdf, visualize_sdf_points
+from train import visualize_sdf_points
 from preprocess import get_mesh_files
 from mesh_to_sdf import sample_sdf_near_surface
 import trimesh
 from sdf import *
 from hyperparams import *
 from mcwrapper import extract_mesh_mcubes
+from oldmc import extract_mesh_from_sdf
 
 # ========== NOTE: MUST MAKE DIRECTORY FIRST! ===============#
-trained_dir =  'hashtable/base5/2layers_sdf_shifted_2e18res_2e18table'
-num_epochs = 17
+trained_dir =  'hashtable/cube/cube_nooutputactivation_sample60w_lowmaxres'
+# trained_dir =  'hashtable/cube/cube'
+epoch_list = [0,31]
 
-# mesh = trimesh.load_mesh('out.stl')
-# mesh.show()
-hashtable_save_path = 'trained_models/' + trained_dir + '_table' + '_'+str(num_epochs)+'epochs'
-# shape_code_path = 'trained_models/' + trained_dir + '_emb'
-model_path = 'trained_models/' + trained_dir + '_model' + '_'+str(num_epochs)+'epochs'
+for num_epochs in epoch_list:
 
-save_dir = 'output/' + trained_dir + '_'+str(num_epochs)+'epochs' + '.stl'  # MAKE NEW DIR
+    # mesh = trimesh.load_mesh('out.stl')
+    # mesh.show()
+    hashtable_save_path = 'trained_models/' + trained_dir + '_table' + '_'+str(num_epochs)+'epochs'
+    # shape_code_path = 'trained_models/' + trained_dir + '_emb'
+    model_path = 'trained_models/' + trained_dir + '_model' + '_'+str(num_epochs)+'epochs'
 
-# load model
-hashtable_enc = keras.models.load_model(hashtable_save_path)
-model = keras.models.load_model(model_path)
-# shape_codes = keras.models.load_model(shape_code_path)
-hashtable_enc.summary()
-model.summary()
-# shape_codes.summary()
+    save_dir = 'output/' + trained_dir + '_'+str(num_epochs)+'epochs' # MAKE NEW DIR
+
+    # load model
+    hashtable_enc = keras.models.load_model(hashtable_save_path)
+    model = keras.models.load_model(model_path)
+    # shape_codes = keras.models.load_model(shape_code_path)
+    # hashtable_enc.summary()
+    # model.summary()
+    # shape_codes.summary()
 
 
-print("extracting")
-shape_idx = 1
-# shape_code = shape_codes(shape_idx)
-# print(shape_code[:20])
+    print("extracting")
+    shape_idx = 1
+    # shape_code = shape_codes(shape_idx)
+    # print(shape_code[:20])
 
-extract_mesh_from_sdf(hashtable_enc, model, save_dir, occupancy=False, num_samples=2**24, sparse=False) #2**25 HI, 2**27 very high, 2**22 default
-# extract_mesh_mcubes(hashtable_enc, model, save_dir)
-print("done")
-# for shape_idx in range(num_shapes):
-#     save_dir = 'output/' + 'multishape/gaussian/5shapes_gaussian_model_2000epochs' + '_shape'+str(shape_idx) + '.stl'  # MAKE NEW DIR
-#     shape_code = shape_codes(shape_idx)
-#     # print(shape_code[:20])
-#     extract_mesh_from_sdf(shape_code, model, save_dir, occupancy=True, num_samples=2**27, sparse=False) #2**25 HI, 2**27 very high, 2**22 default
+    extract_mesh_from_sdf(hashtable_enc, model, save_dir, occupancy=False, num_samples=2**28, sparse=False) #2**25 HI, 2**27 very high, 2**22 default
+    # extract_mesh_mcubes(hashtable_enc, model, save_dir)
+    
+    print("done")
