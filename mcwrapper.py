@@ -1,6 +1,7 @@
 import numpy as np
 import trimesh
 import mcubes
+import torch
 
 USE_MARCHING_CUBES = True
 
@@ -31,8 +32,8 @@ def extract_mesh_mcubes(hashtable, model, save_path, occupancy=False,):
 
     #     points_to_sample = points_to_sample.reshape(1,-1,3)
 
-    encoded_positions = hashtable(points_to_sample)
-    preds = -model(encoded_positions).numpy()
+    encoded_positions = hashtable(torch.Tensor(points_to_sample).double())
+    preds = -model(encoded_positions).detach().numpy()
     print("pos:", points_to_sample[:20])
     print("preds: ", preds[:20])
 

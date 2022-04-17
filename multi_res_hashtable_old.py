@@ -1,59 +1,46 @@
-from hyperparams import *
-import torch
-from torch import nn
+import tensorflow as tf
+import tensorflow.keras as keras
+from tensorflow.keras.layers import Embedding
+from tensorflow.keras.initializers import RandomNormal, RandomUniform
+from tensorflow_addons.layers import WeightNormalization
+import tensorflow_addons as tfa
+from hyperparams_old import *
 
-class MultiResolutionHashEncoding(nn.Module):
+class MultiResolutionHashEncoding(keras.Model):
     def __init__(self, table_sz=2**14, max_resolution=512, feature_dim=2):
         super(MultiResolutionHashEncoding, self).__init__()
+        emb_init = RandomUniform(-10**-4, 10**-4)
 
         self.feature_dim = feature_dim
         self.min_resolution = 16
         self.max_resolution = max_resolution
         self.table_sz = table_sz
-        
+        # num tables = fixed = 16
+        self.num_levels = 16
+        #TODO: use 3D tensor and gather() instead?
+        self.table1 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table2 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table3 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table4 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table5 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table6 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table7 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table8 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table9 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table10 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table11 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table12 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table13 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table14 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table15 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
+        self.table16 = Embedding(table_sz, feature_dim, embeddings_initializer=emb_init)
 
-        self.table1 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table1.weight, -10**-4, 10**-4)
-        self.table2 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table2.weight, -10**-4, 10**-4)
-        self.table3 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table3.weight, -10**-4, 10**-4)
-        self.table4 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table4.weight, -10**-4, 10**-4)
-        self.table5 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table5.weight, -10**-4, 10**-4)
-        self.table6 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table6.weight, -10**-4, 10**-4)
-        self.table7 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table7.weight, -10**-4, 10**-4)
-        self.table8 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table8.weight, -10**-4, 10**-4)
-        self.table9 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table9.weight, -10**-4, 10**-4)
-        self.table10 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table10.weight, -10**-4, 10**-4)
-        self.table11 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table11.weight, -10**-4, 10**-4)
-        self.table12 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table12.weight, -10**-4, 10**-4)
-        self.table13 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table13.weight, -10**-4, 10**-4)
-        self.table14 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table14.weight, -10**-4, 10**-4)
-        self.table15 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table15.weight, -10**-4, 10**-4)
-        self.table16 = nn.Embedding(table_sz, feature_dim)
-        nn.init.uniform_(self.table16.weight, -10**-4, 10**-4)
-
-        # list of above tables/embeddings to be iterated over
         self.hashtables = [self.table1, self.table2, self.table3, self.table4, self.table5, self.table6, 
         self.table7, self.table8, self.table9, self.table10,
         self.table11, self.table12, self.table13, self.table14, self.table15, self.table16]
 
-        # num tables = fixed = 16
-        self.num_levels = len(self.hashtables)
 
-    def forward(self, x):
+    def call(self, x):
         '''
         Args:
             x: batch of normalized 3D coordinates between 0 and 1, [B, 3]
@@ -63,25 +50,26 @@ class MultiResolutionHashEncoding(nn.Module):
         #TODO: append shape code to final input vec
 
         # get scaling factor for resolution 
-        # max_res = tf.cast(self.max_resolution, tf.float32)
-        # min_res = tf.cast(self.min_resolution, tf.float32)
+        max_res = tf.cast(self.max_resolution, tf.float32)
+        min_res = tf.cast(self.min_resolution, tf.float32)
         # b = tf.exp((tf.math.log(max_res) - tf.math.log(min_res)) / (self.num_levels-1)) #in [1.38, 2]
         b=1.38
 
         # for each res, find current voxel, hash corner indices, trilinearly interpolate features
-        final_feature_list = []
+        final_feature = None
         
-
         for curr_level, table in enumerate(self.hashtables):
-            curr_resolution = torch.floor(torch.tensor(self.min_resolution * b**curr_level))
+            curr_resolution = tf.math.floor(self.min_resolution * b**curr_level)
             verts = self.get_nearest_vertices_coords(x, curr_resolution) # [B, 8,3] = x/y/z for each of the 8 vertices
             hashed_feats = self.get_hashtable_features(verts, table) # [B,8,feat_dim]
-
             interpolated_feat = self.get_interpolated_feature(x, hashed_feats)  # [B,feat_dim] single interp feat per batch
             # concatenate current resolution's feature to final feature vec
-            final_feature_list.append(interpolated_feat) # [B, current+feat_dim]
-
-        return torch.cat(final_feature_list, dim=1) # [B, num_levels*feat_dim]
+            if final_feature is None:
+                final_feature = interpolated_feat #[B, feat_dim]
+            else:
+                #TODO: append to list and stack instead
+                final_feature = tf.concat([final_feature, interpolated_feat], axis=1) # [B, current+feat_dim]
+        return final_feature # [B, l*feat_dim]
         
     def get_nearest_vertices_coords(self, unscaled_position, curr_resolution):
         ''' Gets the integer coordinates of the vertices of the bounding cube containing the position
@@ -96,20 +84,20 @@ class MultiResolutionHashEncoding(nn.Module):
         # each vertex is a combination (triple) of floor/ceil(position_x), floor/ceil(pos_y), floor/ceil(pos_z)
         scaled_pos = curr_resolution*unscaled_position # [B,3]
         # get integer coordinates of opposite extrema of cube containing the position
-        x_low, y_low, z_low = torch.split(torch.floor(scaled_pos).int(), split_size_or_sections=1, dim=1) ## [B,3] -> 3*[B,1]
-        x_high, y_high, z_high = torch.split(torch.ceil(scaled_pos).int(), split_size_or_sections=1, dim=1) 
+        x_low, y_low, z_low = tf.split(tf.cast(tf.math.floor(scaled_pos), dtype=tf.int32), num_or_size_splits=3, axis=1) ## [B,3] -> 3*[B,1]
+        x_high, y_high, z_high = tf.split(tf.cast(tf.math.ceil(scaled_pos), dtype=tf.int32), num_or_size_splits=3, axis=1) 
         # return vertices in clockwise order (about z-axis), starting with the first four along the z_low plane then moving up to the four on z_high 
         # along each plane, start at vertex nearest to the origin (x_low, y_low, z_low)
-        v0 = torch.cat([x_low, y_low, z_low], dim=1) #[B,3]
-        v1 = torch.cat([x_high, y_low, z_low], dim=1)
-        v2 = torch.cat([x_high, y_high, z_low], dim=1)
-        v3 = torch.cat([x_low, y_high, z_low], dim=1)
-        # alotorch.catplane
-        v4 = torch.cat([x_low, y_low, z_high], dim=1)
-        v5 = torch.cat([x_high, y_low, z_high], dim=1)
-        v6 = torch.cat([x_high, y_high, z_high], dim=1)
-        v7 = torch.cat([x_low, y_high, z_high], dim=1)
-        return torch.stack([v0,v1,v2,v3,v4,v5,v6,v7], dim=1) #[B,8,3]
+        v0 = tf.concat([x_low, y_low, z_low], axis=1) #[B,3]
+        v1 = tf.concat([x_high, y_low, z_low], axis=1)
+        v2 = tf.concat([x_high, y_high, z_low], axis=1)
+        v3 = tf.concat([x_low, y_high, z_low], axis=1)
+        # along upper plane
+        v4 = tf.concat([x_low, y_low, z_high], axis=1)
+        v5 = tf.concat([x_high, y_low, z_high], axis=1)
+        v6 = tf.concat([x_high, y_high, z_high], axis=1)
+        v7 = tf.concat([x_low, y_high, z_high], axis=1)
+        return tf.stack([v0,v1,v2,v3,v4,v5,v6,v7], axis=1) #[B,8,3]
 
     def get_hashtable_features(self, vertices, table):
         '''Indexes the given embedding table using indices given by a spatial hash function applied to the vertex coordinates.
@@ -120,17 +108,16 @@ class MultiResolutionHashEncoding(nn.Module):
         Returns:
             features retrieved at the hashed coordinates, [B, 8, feat_dim]
         '''
-
-        x, y, z = torch.unbind(vertices, dim=2) # [B, 8, 3] -> 3*[B,8]
+        x, y, z = tf.unstack(vertices,  num=3, axis=2) # [B, 8, 3] -> 3*[B,8]
         # apply xor to each x_i*prime 
         # a XOR b XOR c
         a = x
         b = 2654435761 * y
         c = 805459861 * z
-        a_xor_b = torch.bitwise_xor(a, b)
-        xor_product = torch.bitwise_xor(a_xor_b, c) # shapge unchanged
+        a_xor_b = tf.bitwise.bitwise_xor(a, b)
+        xor_product = tf.bitwise.bitwise_xor(a_xor_b, c) # shapge unchanged
         # xor_product % T
-        indices = torch.remainder(xor_product, self.table_sz) # [B, 8], one per vertex
+        indices = tf.math.floormod(xor_product, self.table_sz) # [B, 8], one per vertex
 
         return table(indices) #[B, 8, feat], one per vertex
 
@@ -147,10 +134,10 @@ class MultiResolutionHashEncoding(nn.Module):
         '''
         # get interpolation weights (one for each dim); between 0 and 1
         # lower interpolation weight == position is closer to vertex of cube nearest the origin
-        interp_weights = position - torch.floor(position) # [B,3]
-        x_weight, y_weight, z_weight = torch.split(interp_weights, split_size_or_sections=1, dim=1) # [B,3] -> 3*[B,1]
-        v0,v1,v2,v3,v4,v5,v6,v7 = torch.unbind(features, dim=1) # [B,8,feat_dim] -> 8*[B, feat]
-        # interpolate along x-axis along a plane defined by 4 points (check wikipedia article, "Method" section)
+        interp_weights = position - tf.math.floor(position) # [B,3]
+        x_weight, y_weight, z_weight = tf.split(interp_weights, num_or_size_splits=3, axis=1) # [B,3] -> 3*[B,1]
+        v0,v1,v2,v3,v4,v5,v6,v7 = tf.unstack(features, num=8, axis=1) # [B,8,feat_dim] -> 8*[B, feat]
+        # interpolate along x-axis along a plane defined by 4 points (check wikipedia article, "Method")
         c00 = v0*(1-x_weight) + v1*x_weight
         c01 = v4*(1-x_weight) + v5*x_weight
         c10 = v3*(1-x_weight) + v2*x_weight
@@ -179,8 +166,8 @@ class MultiResolutionHashEncoding(nn.Module):
 #     # each vertex is a combination (triple) of floor/ceil(position_x), floor/ceil(pos_y), floor/ceil(pos_z)
 #     scaled_pos = curr_resolution*unscaled_position # [B,3]
 #     # get integer coordinates of opposite extrema of cube containing the position
-#     x_low, y_low, z_low = torch.split(tf.cast(tf.math.floor(scaled_pos), dtype=tf.int32), num_or_size_splits=3, axis=1) ## [B,3] -> 3*[B,1]
-#     x_high, y_high, z_high = torch.split(tf.cast(tf.math.ceil(scaled_pos), dtype=tf.int32), num_or_size_splits=3, axis=1) 
+#     x_low, y_low, z_low = tf.split(tf.cast(tf.math.floor(scaled_pos), dtype=tf.int32), num_or_size_splits=3, axis=1) ## [B,3] -> 3*[B,1]
+#     x_high, y_high, z_high = tf.split(tf.cast(tf.math.ceil(scaled_pos), dtype=tf.int32), num_or_size_splits=3, axis=1) 
 #     # return vertices in clockwise order (about z-axis), starting with the first four along the z_low plane then moving up to the four on z_high 
 #     # along each plane, start at vertex nearest to the origin (x_low, y_low, z_low)
 #     v0 = tf.concat([x_low, y_low, z_low], axis=1) #[B,3]
@@ -231,7 +218,7 @@ class MultiResolutionHashEncoding(nn.Module):
 #     # get interpolation weights (one for each dim); between 0 and 1
 #     # lower interpolation weight == position is closer to vertex of cube nearest the origin
 #     interp_weights = position - tf.math.floor(position) # [B,3]
-#     x_weight, y_weight, z_weight = torch.split(interp_weights, num_or_size_splits=3, axis=1) # [B,3] -> 3*[B,1]
+#     x_weight, y_weight, z_weight = tf.split(interp_weights, num_or_size_splits=3, axis=1) # [B,3] -> 3*[B,1]
 #     v0,v1,v2,v3,v4,v5,v6,v7 = tf.unstack(features, num=8, axis=1) # [B,8,feat_dim] -> 8*[B, feat]
 #     # interpolate along x-axis along a plane defined by 4 points (check wikipedia article, "Method")
 #     c00 = v0*(1-x_weight) + v1*x_weight

@@ -4,7 +4,7 @@ from tensorflow.keras.layers import Dense, Dropout, ReLU, Activation, Embedding
 from tensorflow.keras.initializers import RandomNormal
 from tensorflow_addons.layers import WeightNormalization
 import tensorflow_addons as tfa
-from hyperparams import *
+from hyperparams_old import *
 
 # store shape codes in separate embedding class
 class ShapeCodeEmbedding(keras.Model):
